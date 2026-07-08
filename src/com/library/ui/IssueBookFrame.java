@@ -1,6 +1,6 @@
 package com.library.ui;
 
-import com.library.db.DatabaseConnection;
+import com.library.db.DatabaseConnection; // Matches your exact folder paths
 import javax.swing.*;
 import java.awt.*;
 import java.sql.Connection;
@@ -8,11 +8,11 @@ import java.sql.PreparedStatement;
 import java.time.LocalDate;
 
 public class IssueBookFrame extends JFrame {
-    private JTextField txtBookId, txtMemberId;
+    private JTextField txtBookId, txtMemberId, txtIssueDate;
 
     public IssueBookFrame() {
         setTitle("Library Management System - Issue Book");
-        setSize(450, 350);
+        setSize(450, 400); // Expanded slightly to fit the new date row comfortably
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(null);
@@ -32,21 +32,31 @@ public class IssueBookFrame extends JFrame {
         add(txtBookId);
 
         JLabel lblMemberId = new JLabel("Member ID:");
-        lblMemberId.setBounds(50, 150, 100, 25);
+        lblMemberId.setBounds(50, 140, 100, 25);
         add(lblMemberId);
 
         txtMemberId = new JTextField();
-        txtMemberId.setBounds(150, 150, 220, 30);
+        txtMemberId.setBounds(150, 140, 220, 30);
         add(txtMemberId);
 
+        // 📅 ADDED: DATE FIELD INPUT (Feature Checklist)
+        JLabel lblDate = new JLabel("Issue Date:");
+        lblDate.setBounds(50, 190, 100, 25);
+        add(lblDate);
+
+        txtIssueDate = new JTextField();
+        txtIssueDate.setBounds(150, 190, 220, 30);
+        txtIssueDate.setText(LocalDate.now().toString()); // Autofills with today's date (YYYY-MM-DD)
+        add(txtIssueDate);
+
         JButton btnIssue = new JButton("Issue Book");
-        btnIssue.setBounds(80, 230, 120, 35);
+        btnIssue.setBounds(80, 260, 120, 35);
         btnIssue.setBackground(new Color(225, 225, 225));
         add(btnIssue);
 
         // ↩️ WORKING BACK BUTTON
         JButton btnBack = new JButton("Back");
-        btnBack.setBounds(230, 230, 120, 35);
+        btnBack.setBounds(230, 260, 120, 35);
         btnBack.setBackground(new Color(225, 225, 225));
         add(btnBack);
 
@@ -57,10 +67,10 @@ public class IssueBookFrame extends JFrame {
     private void issueBookProcess() {
         String bookId = txtBookId.getText().trim();
         String memberId = txtMemberId.getText().trim();
-        String today = LocalDate.now().toString(); // Auto tracks modern system date YYYY-MM-DD
+        String issueDateStr = txtIssueDate.getText().trim();
 
-        if (bookId.isEmpty() || memberId.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Both fields are mandatory.", "Warning", JOptionPane.WARNING_MESSAGE);
+        if (bookId.isEmpty() || memberId.isEmpty() || issueDateStr.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "All input tracking fields are mandatory.", "Warning", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
@@ -77,18 +87,24 @@ public class IssueBookFrame extends JFrame {
                 }
             }
 
-            // Record transaction row instance
-            String insertTx = "INSERT INTO transactions (book_id, member_id, issue_date) VALUES (?, ?, ?)";
+            // 🔄 AUTOMATIC DUE DATE CALCULATION (7-Day Return Rule)
+            LocalDate issueDate = LocalDate.parse(issueDateStr);
+            LocalDate dueDate = issueDate.plusDays(7); 
+
+            // Record transaction row instance with issue_date and due_date
+            String insertTx = "INSERT INTO transactions (book_id, member_id, issue_date, due_date) VALUES (?, ?, ?, ?)";
             try (PreparedStatement pstmt2 = conn.prepareStatement(insertTx)) {
                 pstmt2.setString(1, bookId);
                 pstmt2.setString(2, memberId);
-                pstmt2.setString(3, today);
+                pstmt2.setString(3, issueDate.toString());
+                pstmt2.setString(4, dueDate.toString()); // Stores due date directly for reporting
                 pstmt2.executeUpdate();
             }
 
             JOptionPane.showMessageDialog(this, "Book successfully issued out!");
             txtBookId.setText("");
             txtMemberId.setText("");
+            txtIssueDate.setText(LocalDate.now().toString()); // Reset to real-time current date
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Error: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
